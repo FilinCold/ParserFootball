@@ -7,7 +7,13 @@ import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
 import { ID_TABLE } from "./constants";
 import { parserMatch } from "./service";
-import { checkAddMatches, isCheckAddMatches } from "./utils";
+import {
+  addMatches,
+  checkAddMatches,
+  filterByYesterdaysDate,
+  isCheckAddMatches,
+  sleep,
+} from "./utils";
 
 const app = express();
 // Разблокировать cors
@@ -26,47 +32,65 @@ const serviceAccountAuth = new JWT({
 const doc = new GoogleSpreadsheet(ID_TABLE, serviceAccountAuth);
 
 app.listen(port, async () => {
-  console.log(`Server listening on port http://localhost:${port}`);
+  console.log(`Server listening on port ${port}`);
 
   await doc.loadInfo();
   const sheet = doc.sheetsByIndex[0];
-  const rows = await sheet.getRows(); // данные из гугл таблицы
-  const matches = await parserMatch.matches;
-  const convertGoogleData = parserMatch.convertGoogleRows(rows);
-  console.log(matches, 9999, "website matches========>");
-  console.log(convertGoogleData, 6666);
-
-  // checkAddMatches([], rows, sheet);
-  // console.log(isCheckAddMatches([], convertGoogleData), 999999);
   await sheet.loadCells("A1:K10");
-  const budget = sheet.getCell(0, 10); // получаем сумму
 
-  await sheet.saveUpdatedCells();
-
-  // const sheet = await doc.addSheet({ headerValues: ["name", "email"] });
-  // append rows
-  // const larryRow = await sheet.addRow({
-  //   time: "13:12",
-  //   date: "13.12",
-  // });
-  // await sheet.addRows(matches);
-
-  // read rows
-
-  const date = rows[3].get("date");
-
-  // console.log(date, 2222);
-
-  // cron.schedule("00 12 * * *", () => {
+  // // Добавляет в таблицу список матчей, если в таблицу уже были добавлены, то не добавляет
+  // cron.schedule("00 12 * * *", async () => {
   //   console.log("running a task every day in 12:00");
+  //   const rows = await sheet.getRows(); // данные из гугл таблицы
+  //   const convertGoogleData = parserMatch.convertGoogleRows(rows); // преобразовываем данные в читаемый вид
+  //   const actualMatches = await parserMatch.matches;
+  //   addMatches(actualMatches, convertGoogleData, sheet);
   // });
 
-  // cron.schedule("55 23 * * *", () => {
-  //   console.log("running a task every day in 23:55");
+  // // // проверяет предыдущие записанные матчи изменяет бюджет и удаляет их из таблицы
+  // cron.schedule("00 04 * * *", async () => {
+  //   console.log("running a task every day in 04:00");
+
+  //   const rows = await sheet.getRows(); // данные из гугл таблицы
+  //   const convertGoogleData = parserMatch.convertGoogleRows(rows); // преобразовываем данные в читаемый вид
+  //   const yesterdayMatches = filterByYesterdaysDate(convertGoogleData);
+
+  //   if (!yesterdayMatches.length) {
+  //     return;
+  //   }
+
+  //   const valuesChangeBudget = await parserMatch.parseResMatchesCompleted(
+  //     yesterdayMatches
+  //   );
+  //   const budget = sheet.getCell(0, 10); // получаем бюджет
+  //   const budgetValue = budget?.value ? Number(budget?.value) : 0;
+
+  //   const newValue = valuesChangeBudget?.reduce((prevVal, curVal) => {
+  //     prevVal += curVal;
+
+  //     return prevVal;
+  //   }, budgetValue);
+
+  //   budget.value = newValue; // change value budget
+  //   yesterdayMatches.map(async (match) => {
+  //     const id = Number(match?.id);
+
+  //     if (!id) {
+  //       return;
+  //     }
+
+  //     await rows[id].delete();
+  //   });
+
+  //   await sheet.saveUpdatedCells();
   // });
 
-  // cron.schedule("*/5 * * * * *", async () => {
-  //   console.log("running a task every 5 secs");
-  //   // await sheet.addRows(matches);
-  // });
+  cron.schedule("*/5 * * * * *", async () => {
+    console.log("running a task every 5 secs");
+
+    const rows = await sheet.getRows(); // данные из гугл таблицы
+    const convertGoogleData = parserMatch.convertGoogleRows(rows); // преобразовываем данные в читаемый вид
+    const actualMatches = await parserMatch.matches;
+    addMatches(actualMatches, convertGoogleData, sheet);
+  });
 });

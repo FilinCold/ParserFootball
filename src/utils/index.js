@@ -1,40 +1,45 @@
-export const addMatches = async (items, googleSheet) => {
-  await googleSheet.addRows(items);
-};
-
-export const isCheckAddMatches = (actualMatches, googleMatches) => {
-  const arr = [
-    // ...googleMatches,
-
-    {
-      time: "19:00",
-      date: "05.01",
-      owner: "Пирамидс1111",
-      guest: "Эсперанс",
-      forecast: "П1",
-      coefficient: 2.025,
-      check: 500,
-      link: "https://nb-bet.com/Events/1338572-piramids-esperans-prognoz-na-match",
-      result: 0,
-    },
-  ];
-
+export const getMatchesWhichAdd = (actualMatches, googleMatches) => {
   try {
-    const ownersActualMatch = arr.map((item) => item.owner); // change on actualmatches
-    console.log(ownersActualMatch, 3333);
+    const ownersActualMatch = googleMatches.map((item) => item.owner); // change on actualmatches
 
-    const filteredMatches = googleMatches.filter(
-      (item) => !ownersActualMatch.includes(item.get("owner"))
-    );
+    const filteredMatches = actualMatches.filter((match) => {
+      return !ownersActualMatch.includes(match.owner);
+    });
 
-    console.log(filteredMatches[0].get("owner"), 4444);
-
-    if (!filteredMatches.length) {
-      return false;
-    }
-
-    return true;
+    return filteredMatches;
   } catch (error) {
-    console.log(error, 8888);
+    console.log("Error", error);
+
+    return [];
   }
 };
+
+export const addMatches = async (actualMatches, googleMatches, googleSheet) => {
+  const matchesWhichAdd = getMatchesWhichAdd(actualMatches, googleMatches);
+  const isAddMatches = matchesWhichAdd.length;
+
+  if (!isAddMatches) {
+    return;
+  }
+
+  await googleSheet.addRows(matchesWhichAdd);
+};
+
+export const getYesterdayDate = () => {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1); // Уменьшаем текущую дату на 1 день
+
+  // Форматируем дату в виде 'ДД.ММ'
+  let day = String(yesterday.getDate()).padStart(2, "0");
+  let month = String(yesterday.getMonth() + 1).padStart(2, "0"); // Месяцы считаются с нуля
+  return `${day}.${month}`;
+};
+
+export const filterByYesterdaysDate = (arr) => {
+  const yesterday = getYesterdayDate(); // Получаем вчерашнюю дату
+  return arr.filter((item) => item.date === yesterday);
+};
+
+export const sleep = async (timer) =>
+  await new Promise((res) => setTimeout(res, timer));

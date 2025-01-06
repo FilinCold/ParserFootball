@@ -1,5 +1,12 @@
 import puppeteer from "puppeteer";
-import { MAIN_URL_FOTTBALL, SUMM_AMOUNT, SUMM_WIN_DEFAULT } from "../constants";
+import {
+  FIRST_WINNER,
+  MAIN_URL_FOTTBALL,
+  SECOND_WINNER,
+  SUMM_AMOUNT,
+  SUMM_WIN_DEFAULT,
+} from "../constants";
+import { sleep } from "../utils";
 
 class ParserMatch {
   constructor() {
@@ -105,15 +112,17 @@ class ParserMatch {
       const [timeMatch, dateMatch] = dates[i];
       const [firstCommand, secondCommand] = commands[i];
       const [_, secondCoeff] = coeff[i];
+      const convertCoeffInDot = String(secondCoeff);
       const win = winners[i];
       const url = urls[i];
       const match = {
+        id: i,
         time: timeMatch,
         date: dateMatch,
         owner: firstCommand,
         guest: secondCommand,
         forecast: win,
-        coefficient: secondCoeff,
+        coefficient: convertCoeffInDot,
         check: SUMM_AMOUNT,
         link: url,
         result: SUMM_WIN_DEFAULT,
@@ -181,7 +190,7 @@ class ParserMatch {
       winners: rawWinnerMatches,
     };
 
-    this.browser?.close();
+    await this.browser?.close();
     return this.createCovertMatchesForecast(dataMatches); // [{ time: '', date: '', }, ...]
   };
 
@@ -205,6 +214,7 @@ class ParserMatch {
   convertGoogleRows(items = []) {
     return items.reduce((prevVal, curVal) => {
       const convertGoogleMatch = {
+        id: curVal?.get("id"),
         time: curVal?.get("time"),
         date: curVal?.get("date"),
         owner: curVal?.get("owner"),
@@ -221,6 +231,58 @@ class ParserMatch {
       return prevVal;
     }, []);
   }
+
+  parseResMatchesCompleted = async (completedMatches = []) => {
+    const arr = [];
+    const browser = await puppeteer?.launch({
+      headless: true,
+      args: [
+        "--start-fullscreen", // you can also use '--start-fullscreen'
+      ],
+    });
+
+    for (let i = 0; i < completedMatches.length; i++) {
+      const page = await browser.newPage();
+      await page?.setViewport({ width: 1080, height: 1024 });
+      await page?.setUserAgent(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+      );
+      await page?.goto?.(completedMatches[i]?.link, {
+        waitUntil: "domcontentloaded",
+      });
+
+      const rawCheck = await page?.evaluate?.(() => {
+        return Array.from(
+          document.querySelectorAll("div.sc-1bcc6d0c-11 > div"),
+          (div) => div.innerHTML
+        );
+      });
+
+      const [firstCommand, secondCommand] = rawCheck;
+      const winCommand =
+        firstCommand > secondCommand ? FIRST_WINNER : SECOND_WINNER;
+
+      // проверяем результат матча с тем, который прогнозировали
+      // иначе преобразовываем сумму ставки в отрицательное и кладем в массив
+      if (winCommand === completedMatches[i]?.forecast) {
+        const money =
+          Number(completedMatches[i]?.coefficient) *
+          Number(completedMatches[i]?.check);
+        arr.push(money);
+        await page.close();
+
+        continue;
+      }
+
+      const summBet = -Number(completedMatches[i]?.check);
+      arr.push(summBet);
+      await page.close();
+    }
+
+    await browser.close();
+
+    return arr;
+  };
 }
 
 export const parserMatch = new ParserMatch();
