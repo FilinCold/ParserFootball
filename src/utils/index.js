@@ -4,7 +4,7 @@ export const addMatches = async (items, googleSheet) => {
 
 export const isCheckAddMatches = (actualMatches, googleMatches) => {
   const arr = [
-    ...googleMatches,
+    // ...googleMatches,
 
     {
       time: "19:00",
