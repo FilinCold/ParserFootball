@@ -91,6 +91,8 @@ app.listen(port, async () => {
     const rows = await sheet.getRows(); // данные из гугл таблицы
     const convertGoogleData = parserMatch.convertGoogleRows(rows); // преобразовываем данные в читаемый вид
     const actualMatches = await parserMatch.matches;
+    console.log("actualMatches========>", actualMatches, 111111);
+
     addMatches(actualMatches, convertGoogleData, sheet);
   });
 });
