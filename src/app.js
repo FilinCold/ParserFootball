@@ -88,11 +88,15 @@ app.listen(port, async () => {
   cron.schedule("*/5 * * * * *", async () => {
     console.log("running a task every 5 secs");
 
-    const rows = await sheet.getRows(); // данные из гугл таблицы
-    const convertGoogleData = parserMatch.convertGoogleRows(rows); // преобразовываем данные в читаемый вид
-    const actualMatches = await parserMatch.matches;
-    console.log("actualMatches========>", actualMatches, 111111);
+    try {
+      const rows = await sheet.getRows(); // данные из гугл таблицы
+      const convertGoogleData = parserMatch.convertGoogleRows(rows); // преобразовываем данные в читаемый вид
+      const actualMatches = await parserMatch.matches;
+      console.log("actualMatches========>", actualMatches, 111111);
 
-    addMatches(actualMatches, convertGoogleData, sheet);
+      addMatches(actualMatches, convertGoogleData, sheet);
+    } catch (error) {
+      console.log("Error add matches in table", error);
+    }
   });
 });
