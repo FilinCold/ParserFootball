@@ -6,7 +6,6 @@ import {
   SUMM_AMOUNT,
   SUMM_WIN_DEFAULT,
 } from "../constants";
-import { sleep } from "../utils";
 
 class ParserMatch {
   constructor() {
